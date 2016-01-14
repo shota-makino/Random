@@ -1,0 +1,3 @@
+#Random Things
+<p>This repo is a collection of random code I hope to maintain. We all have random ideas that we wish to implement, and most of the time implementing it, or getting the idea to paper is the hardest part. If you're a perfectionist, then the idea is even harder to start because the amount of time required may not justify the return. Even so, I believe you should - at the very least - note it down and share it for others to work on, if you know you don't want to commit to it. Just don't leave an idea behind!</p>
+<p>Anyway, that is my long winded reason for creating this repo. A source of all junk code of various ideas, which may one day find it's place in the world.</p>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>videojs-notetaking Demo</title>
+  <link href="/node_modules/video.js/dist/video-js.css" rel="stylesheet">
+  <link href="/node_modules/font-awesome/css/font-awesome.css" rel="stylesheet">
+  <link href="/src/css/videojs-notetaking.css" rel="stylesheet">
+</head>
+<body>
+  <video id="videojs-notetaking-player" class="video-js vjs-default-skin" controls>
+    <source src="//vjs.zencdn.net/v/oceans.mp4" type='video/mp4'>
+    <source src="//vjs.zencdn.net/v/oceans.webm" type='video/webm'>
+  </video>
+  <div id="vjs-notesection"></div>
+
+  <video id="videojs-notetaking-player2" class="video-js vjs-default-skin" controls>
+    <source src="//vjs.zencdn.net/v/oceans.mp4" type='video/mp4'>
+    <source src="//vjs.zencdn.net/v/oceans.webm" type='video/webm'>
+  </video>
+  <div id="vjs-notetaking_2" class="vjs-notetaking"></div>
+  
+  <ul>
+    <li><a href="/test/">Run unit tests in browser.</a></li>
+    
+  </ul>
+  <script src="/node_modules/video.js/dist/video.js"></script>
+  <script src="/dist/videojs-notetaking.js"></script>
+  <script>
+    (function(window, videojs) {
+      var player1 = window.player1 = videojs('videojs-notetaking-player');
+      var player2 = window.player2 = videojs('videojs-notetaking-player2');
+      player1.notetaking({id: 'vjs-notetaking_2'});
+      player2.notetaking();
+    }(window, window.videojs));
+    
+    //  //vjs.zencdn.net/v/oceans.mp4
+    // //vjs.zencdn.net/v/oceans.webm
+  </script>
+</body>
+</html>

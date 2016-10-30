@@ -1,0 +1,13 @@
+{
+  "name": "videojs-notetaking",
+  "author": "Shota Makino &lt;shota.makino@yahoo.com&gt;",
+  "license": "MIT",
+  "main": [
+    "dist/videojs-notetaking.min.js"
+  ],
+  "keywords": [
+    "videojs",
+    "videojs-plugin"
+  ]
+}
+

@@ -3,6 +3,25 @@ import numpy as np
 
 
 def validateConfig(val, dtype, *conditions):
+    '''Validates configuration input
+    
+    Validates a value for a given configuration property using
+    lambda functions stored in conditions arg
+
+    Args:
+        val: The value to validate
+        dtype: The data type of the value to check against
+        *conditions: A variable list of lambdas that act
+            as coniditions to satisfy against the given value val
+
+    Returns: 
+        The original value val for chained function calls 
+
+    Raise:
+        TypeError: If the type fo val and the dtype do not match or
+            if the condition is not a function
+        RuntimeError: If not all conditions were satisfied
+    ''' 
     if (type(val) != dtype):
         print 'Argument is not of type %(type)s' % {'type': dtype}
         raise TypeError   
@@ -30,6 +49,15 @@ def validateConfig(val, dtype, *conditions):
         raise RuntimeError
 
 def initialize(config): 
+    ''' Initializes Environment data given config
+    
+    Initializes the Environment class properties to 
+    config values 
+
+    Args:
+        config: The configuration 
+
+    '''
     numericTypes = [
         'int16',
         'int32',

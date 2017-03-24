@@ -10,8 +10,14 @@ def validateConfig(val, dtype, *conditions):
     checked = 0
     for check in conditions:
         if callable(check):
-            if (check(val)):
-                checked += 1
+            try:
+                if (check(val)):
+                    checked += 1
+            except:
+                print '''
+                    Config value "%(value)s" violates constraints
+                ''' % {'value': str(val)}
+                raise
         else:
             print 'Argument should be a function'
             raise TypeError
@@ -19,7 +25,7 @@ def validateConfig(val, dtype, *conditions):
         return val 
     else:
         print '''
-            Not all conditions were satisfied for %(val)s
+            Not all conditions were satisfied for "%(val)s"
         ''' % {'val', val} 
         raise RuntimeError
 
@@ -40,22 +46,22 @@ def initialize(config):
     }
 
     conditions = {
-        'splitOn': (
+        'splitOn': [ 
             lambda x, c = config: x in c['columns'],
             lambda x, c = config: c['dtypes'][x] in numericTypes
-        ),
-        'split': (
+        ],
+        'split': [
             lambda x: x < 1
-        ),
-        'target': (
+        ],
+        'target': [
             lambda x, c = config: x in c['columns'] 
-        )
+        ]
     } 
     
     for param, val in config.iteritems():
         if (param in allowed.keys()):
-            Environment['_' + param] = validateConfig(val, allowed[param], *conditions[param])
-             
+            Environment._data['_' + param] = validateConfig(val, allowed[param], *(conditions[param]))
+                         
     
 def make(data, config):
     """Makes a Kaggle environment.
@@ -81,44 +87,45 @@ def make(data, config):
     config['dtypes'] = data.dtypes
     initialize(config)
 
-    colName = Environment._splitOn
+    colName = Environment._data['_splitOn']
     
-    col = df[colName] # Series     
+    col = data[colName] # Series     
 
-    npts = len(df[colName].unique())
+    npts = len(data[colName].unique())
 
-    hntps = npts * Environment._split # npoints to read to
+    hntps = npts * Environment._data['_split'] # npoints to read to
   
-    train = df[df[colName] < hntps]
-    test = df[df[colName] >= hntps] 
+    train = data[data[colName] < hntps]
+    test = data[data[colName] >= hntps] 
 
-    data = {
+    splitData = {
         'train': train,
         'test': test
     }
-     
-    return Environment(data) 
+
+    del data 
+    return Environment(splitData) 
     
-class Environment:
+class Environment(object):
     
     _stepCount = 0
+    _data = {} 
 
     def __init__(self, data):
-        self.observation = {}
+        self.observations = {}
 
-        train = data.train
-        features = train[[x for x in data.columns if x not in list(Environment._target)]]
-        target = train[Environment._target]
+        train = data['train']
+        features = train[[x for x in train.columns if x not in list(Environment._data['_target'])]]
+        target = train[Environment._data['_target']]
 
         self.observations['train'] = train 
         self.observations['features'] = features 
         self.observations['target'] = target 
      
-    def __setitem__(self, key, val):
-        self.data[key] = val
-
-    def __getitem__(self, key, val):
-        return self.data[key]            
+        self.test = data['test']
 
     def reset(self):
-        _stepCount = 0       
+        _stepCount = 0      
+
+    def step():
+        pass 

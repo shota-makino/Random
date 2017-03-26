@@ -63,6 +63,8 @@ def initialize(config):
                     of the data to reserve as training vs testing data
                 'target': A string indicating the column name that
                     is to act as the target data
+                'id': A string indicating the column that identifies 
+                    the given data you are trying to predict for
                 'reward': A function that acts as the objective function
                     you are maximizing or minimizing
     '''
@@ -79,6 +81,7 @@ def initialize(config):
         'splitOn': str,
         'split': float,
         'target': str,
+        'id': str
     }
 
     conditions = {
@@ -91,18 +94,28 @@ def initialize(config):
         ],
         'target': [
             lambda x, c = config: x in c['columns'] 
+        ],
+        'id': [
+            lambda x, c = config: x in c['columns']
         ]
     } 
     
-    
+    nParams = 0 
     for param, val in config.iteritems():
         if (param in allowed.keys()):
             Environment._options['_' + param] = validateConfig(val, allowed[param], *(conditions[param]))
+            nParams += 1
         if (param == 'reward'): # cannot type check for func so add as special case
             if (callable(config[param])):
                 Environment._options['_reward'] = config[param]
-  
-                         
+            nParams += 1     
+
+    if (nParams != len(allowed)):
+        for param, _ in allowed.iteritems():
+            if param not in config.keys():
+                print "%(parameter)s missing in config" % {'parameter': param} 
+                raise 
+
 def make(data, config):
     """Makes a Kaggle environment.
 
@@ -119,6 +132,8 @@ def make(data, config):
                     half.
                 target: The column name that acts as the target variable for 
                     supervised learning tasks
+                id: The column that identifies the piece of data that you are
+                    predicting the target variable for
                 reward: A function acting as the objective function you are 
                     maximizing or minimizing
     Returns:
@@ -172,32 +187,32 @@ class Environment(object):
     def step(self, predictions):
         options = Environment._options
         test = self.test
-        col = options['_splitOn']
-
-        if (not '_steps' in options):
-            steps = test[options['_splitOn']].unique()
-            options['_steps'] = steps 
-
-        steps = options['_steps']
-        nextObs = test[test[col] == steps[_stepCount]]
-
+        actuals =
+        
         rewardArg = {
             'train': self.observations['train'],
             'actual': nextObs,
             'predictions': predictions
         }   
 
+    
         reward = options['reward'](rewardArg)
-        done = False
+        done = self.observations.isDone()
        
-        if (len(steps) == _stepCount):
-            done = True
-        
-        return (nextObs, reward, done, {})
+        return (, reward, done, {})
 
-class Observation():
+class Observation(object):
     _train = None
     _test = None
+
+    _steps = None
+    _stepCount = 0
+    _step = None
+    
+    _colId = None
+    _colStep = None
+    _colTarget = None
+    _colFeatures = None
 
     def __init__(self, data, options):
         if (not Observation._train):
@@ -205,26 +220,49 @@ class Observation():
         else:
             self.train = Observation._train
     
-        if (not Observation._test):
-            self.test = Observation._test = data.test 
-        else:
-            self.test = Observation._test   
+        self.getObservation(Observation._stepCount)
 
-        self.steps = self.test[options['_splitOn']].unique()
-        self.stepCount = 0 
-        self.step = self.steps[self.stepCount]
+        Observation._test = data.test 
 
-        self.colStep = options['_splitOn']
-        self.colTarget = options['_target']
-        self.colFeatures = [
-            x for x in self.train.columns if x not in list(self.colTarget)
+        Observation._steps = Observation._test[options['_splitOn']].unique()
+        Observation._step = Observation._steps[Observation._stepCount]
+
+        Observation._colId = options['_id']
+        Observation._colStep = options['_splitOn']
+        Observation._colTarget = options['_target']
+        Observation._colFeatures = [
+            x for x in self.train.columns if x not in list(Observation._colTarget)
         ]
 
-    def reset(self, num):
-        self.stepCount = num
+    def nextObserjvation(self):
+        if (not self.isDone()):
+            self.makeObservation(self.nextStep())
 
-    def makeNextObservation(self, step):
-        features = self.test[
-            self.test[self.colStep] == step]
-        ][self.colFeatures]
+    def setStep(self, num):
+        Observation._stepCount = num
 
+    def makeObservation(self, step):
+        features = Observation._test[
+            Observation._test[Observation._colStep] == step
+        ][Observation._colFeatures]
+
+        self.features = features
+        self.makeTarget(features)
+        return features
+
+    def makeTarget(self, features):
+        ids = feautures['id'].unique()
+        targetVals = np.zeros(len(ids))        
+        target = pd.DataFrame.from_items(
+            [(Observation._colId, ids), (Observation._colTarget, targetVals)]
+        )
+
+        self.target = target
+        return target
+
+    def nextStep(self):
+        Observation._stepCount += 1
+        return Observation._stepCount
+
+    def isDone(self):
+        return Observation._stepCount == len(Observation._steps)

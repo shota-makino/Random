@@ -110,6 +110,7 @@ def initialize(config):
                 Environment._options['_reward'] = config[param]
             nParams += 1     
 
+    # raise error if config is missing
     if (nParams != len(allowed)):
         for param, _ in allowed.iteritems():
             if param not in config.keys():
@@ -149,7 +150,7 @@ def make(data, config):
     col = data[colName] # Series     
 
     npts = len(data[colName].unique())
-    hntps = npts * Environment._options['_split'] # npoints to read to
+    hntps = int(npts * Environment._options['_split']) # npoints to read to
   
     train = data[data[colName] < hntps]
     test = data[data[colName] >= hntps] 
@@ -186,22 +187,24 @@ class Environment(object):
 
     def step(self, predictions):
         options = Environment._options
-        test = self.test
-        actuals =
-        
+        actuals = self.observations._actuals        
+
         rewardArg = {
-            'train': self.observations['train'],
-            'actual': nextObs,
-            'predictions': predictions
+            'train': self.observations._train,
+            'prediction': predictions,
+            'actual': actuals
         }   
 
     
-        reward = options['reward'](rewardArg)
+        reward = options['_reward'](rewardArg)
+
+        self.observations.nextObservation()
         done = self.observations.isDone()
        
-        return (, reward, done, {})
+        return (self.observations, reward, done, {})
 
 class Observation(object):
+    _isClassVarSet = False
     _train = None
     _test = None
 
@@ -216,14 +219,15 @@ class Observation(object):
 
     def __init__(self, data, options):
         if (not Observation._train):
-            self.train = Observation._train = data.train          
+            self.train = Observation._train = data['train']          
         else:
             self.train = Observation._train
     
-        self.getObservation(Observation._stepCount)
+        self.makeObservation(Observation._stepCount)
 
-        Observation._test = data.test 
+        Observation._test = data['test'] 
 
+        # get the actual values to step by
         Observation._steps = Observation._test[options['_splitOn']].unique()
         Observation._step = Observation._steps[Observation._stepCount]
 
@@ -234,35 +238,67 @@ class Observation(object):
             x for x in self.train.columns if x not in list(Observation._colTarget)
         ]
 
-    def nextObserjvation(self):
+        Observation._isClassVarSet = True        
+
+        # feed the step value to search in dataframe
+        # call after class variables have been set
+        self.makeObservation(Observation._step)
+
+
+    def nextObservation(self):
+        # make sure observations didn't run out
         if (not self.isDone()):
             self.makeObservation(self.nextStep())
 
     def setStep(self, num):
+        if (not Observation._isClassVarSet):
+            return
+
         Observation._stepCount = num
 
     def makeObservation(self, step):
-        features = Observation._test[
+        if (not Observation._isClassVarSet):
+            return  
+
+        segment = Observation._test[    
             Observation._test[Observation._colStep] == step
-        ][Observation._colFeatures]
+        ]
+
+        features = segment[Observation._colFeatures]
 
         self.features = features
-        self.makeTarget(features)
+        self.makeTarget(segment) # should always be called when making observation
+
         return features
 
-    def makeTarget(self, features):
-        ids = feautures['id'].unique()
+    def makeTarget(self, segment):
+        if (not Observation._isClassVarSet):
+            return
+
+        ids = segment['id'].unique()
         targetVals = np.zeros(len(ids))        
+
         target = pd.DataFrame.from_items(
             [(Observation._colId, ids), (Observation._colTarget, targetVals)]
-        )
+        ).sort([Observation._colId])
 
         self.target = target
+
+        self._actuals = segment[
+            [Observation._colId, Observation._colTarget]
+        ].sort([Observation._colId])
+
         return target
 
     def nextStep(self):
+        if (not Observation._isClassVarSet):
+            return
+
         Observation._stepCount += 1
         return Observation._stepCount
 
     def isDone(self):
+        if (not Observation._isClassVarSet):
+            return
+
         return Observation._stepCount == len(Observation._steps)
